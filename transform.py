@@ -1,5 +1,5 @@
-from json_pipeline.transform import Transform
+from json_pipeline.transform import TransformScript
 
 if __name__ == '__main__':
-    transform = Transform()
+    transform = TransformScript()
     transform.main()

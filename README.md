@@ -9,14 +9,14 @@ For running tests:
 Typically you build command line tool in this way:
 
 ```
-from json_pipeline.transform import Transform as JPTransform
+from json_pipeline.transform import TransformScript as JPTransformScript
 
-class Transform(JPTransform):
+class TransformScript(JPTransformScript):
     PIPELINE = ...
 
 
 if __name__ == '__main__':
-    transform = Transform()
+    transform = TransformScript()
     transform.main()
 ```
 

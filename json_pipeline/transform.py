@@ -54,9 +54,6 @@ class Transform:
     }
     PIPELINE = None
 
-    def __init__(self):
-        self.args = self.parse_args()
-
     @staticmethod
     def filter_regex(dataset, args):
         """
@@ -234,6 +231,12 @@ class Transform:
         for prop in _args_properties:
             jsonspec.setdefault(prop, cls.get_default(prop))
         return Args(**jsonspec)
+
+
+class TransformScript(Transform):
+
+    def __init__(self):
+        self.args = self.parse_args()
 
     def parse_args(self):
         self.argparser = argparse.ArgumentParser()

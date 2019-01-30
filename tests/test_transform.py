@@ -2,6 +2,8 @@ import re
 from unittest import TestCase
 
 from json_pipeline.transform import Transform, Args
+from json_pipeline.utils import dict_to_text
+
 
 class TransformTest(TestCase):
 
@@ -180,16 +182,11 @@ class TransformTest(TestCase):
         Return value is the modified record.
         Function is provided in the field argument.
         """
-        def my_func(d, args):
-            result = []
-            for k, v in d['open_hours'].items():
-                result.append(f'{k}: {v}')
-            d['open_hours'] = ', '.join(result)
-            return d
-
         args = Transform.args_from_dict({
             'operation': 'function',
-            'field': my_func,
+            'field': dict_to_text,
+            'target': 'open_hours',
+            'separator': ', ',
         })
         dataset = [{'name': 'Office A', 'open_hours': {'Monday': '9:00-18:00', 'Tuesday': '8:00-18:00'}},
                    {'name': 'Office B', 'open_hours': {'Monday-Friday': '8:00-20:00', 'Saturday': '10:00-18:00'}}]

@@ -125,7 +125,7 @@ class Transform:
                 m = regex_re.search(d[args.field])
                 if m:
                     if m.groups():
-                        d[args.target] = ''.join(m.groups())
+                        d[args.target] = args.separator.join(m.groups())
                     else:
                         d[args.target] = m.group()
             yield d

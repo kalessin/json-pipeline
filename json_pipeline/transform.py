@@ -114,7 +114,7 @@ class Transform:
     @staticmethod
     def extract(dataset, args):
         """
-        Extracts the regex group from the given field, and save in the given target field
+        Extracts the regex groups from the given field, and save in the given target field
         """
         if args.regex is not None:
             regex_re = re.compile(args.regex, flags=reflags(args.regex_flags))
@@ -125,7 +125,7 @@ class Transform:
                 m = regex_re.search(d[args.field])
                 if m:
                     if m.groups():
-                        d[args.target] = m.groups()[0]
+                        d[args.target] = ''.join(m.groups())
                     else:
                         d[args.target] = m.group()
             yield d

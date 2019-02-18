@@ -82,6 +82,21 @@ class TransformTest(TestCase):
                   [{'name': 'Office_A', 'description': 'Headquarter', 'id': 'A'},
                    {'name': 'Office_B', 'description': 'Office', 'id': 'B'}])
 
+    def test_extract_ii(self):
+        """Join the extracted groups from the given field, and save in the given target field
+        """
+        args = Transform.args_from_dict({
+            'operation': 'extract',
+            'field': 'name',
+            'target': 'id',
+            'regex': r'(off)ice_(\w+)',
+            'regex_flags': ['I'],
+        })
+        dataset = [{'name': 'Office_A', 'description': 'Headquarter'}, {'name': 'Office_B', 'description': 'Office'}]
+        self.assertEqual(list(Transform().run(dataset, args)),
+                  [{'name': 'Office_A', 'description': 'Headquarter', 'id': 'OffA'},
+                   {'name': 'Office_B', 'description': 'Office', 'id': 'OffB'}])
+
     def test_template(self):
         """Copy given fields (in template format as per str.format() function) from each record in a dataset,
         into the given target field.

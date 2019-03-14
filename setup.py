@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name             = 'json-pipeline',
-    version          = '0.1.3.1',
+    version          = '0.1.3.2',
     description      = 'Json processing pipeline tools',
     long_description = open('README.md').read(),
     license      = 'BSD',

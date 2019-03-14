@@ -263,3 +263,8 @@ class TransformScript(Transform):
         dataset = [json.loads(l) for l in self.args.input]
         for d in Transform().run(dataset, self.args):
             print(json.dumps(d), file=self.args.output)
+
+
+if __name__ == '__main__':
+    transform = TransformScript()
+    transform.main()

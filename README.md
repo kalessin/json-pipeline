@@ -6,18 +6,8 @@ For running tests:
 
     > nosetest3 tests/test_transform.py
 
-Typically you build command line tool in this way:
+Usage:
 
 ```
-from json_pipeline.transform import TransformScript as JPTransformScript
-
-class TransformScript(JPTransformScript):
-    PIPELINE = ...
-
-
-if __name__ == '__main__':
-    transform = TransformScript()
-    transform.main()
+python -m json_pipeline.transform
 ```
-
-You can skip definition of your subclass. In that case pipeline can be passed via command line.

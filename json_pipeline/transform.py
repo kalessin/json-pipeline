@@ -259,7 +259,7 @@ class TransformScript(Transform):
         self.argparser.add_argument('--input', type=argparse.FileType('r'), help='Target file', default=sys.stdin)
         self.argparser.add_argument('--output', type=argparse.FileType('w'), help='Target file', default=sys.stdout)
        
-    def main():
+    def main(self):
         dataset = [json.loads(l) for l in self.args.input]
         for d in Transform().run(dataset, self.args):
             print(json.dumps(d), file=self.args.output)

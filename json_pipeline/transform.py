@@ -5,11 +5,16 @@ import argparse
 from functools import partial
 from collections import namedtuple
 
-from .utils import load_object
+from json_pipeline.utils import load_object
 
 
-_args_properties = ['operation', 'field', 'regex', 'target', 'separator', 'regex_flags', 'regex_per_item', 'preset', 'pipeline']
+_args_properties = ('operation', 'field', 'regex', 'target', 'separator', 'regex_flags',
+                    'regex_per_item', 'preset', 'pipeline')
 Args = namedtuple('OpArgs', _args_properties)
+
+_ARGS_HELPS = {
+    'field': 'target field',
+}
 
 
 def reflags(lst):
@@ -33,21 +38,39 @@ def plain(txt):
 
 class Transform:
 
-    OPERATIONS = [
-        'filter_regex',
-        'filter_regex_neg',
-        'cross_filter',
-        'filter_not_exists',
-        'rename_field',
-        'extract',
-        'template',
-        'remove_fields',
-        'dedupe',
-        'preset',
-        'plaintext',
-        'function',
-        'fixed_value',
-    ]
+    OPERATIONS = {
+        'filter_regex': ("Filters out records that don't match given regex in the given field",
+                         ('field', 'regex', 'regex_flags')),
+        'filter_regex_neg': ("Filters out records that match given regex in the given field",
+                             ('field', 'regex', 'regex_flags')),
+        'cross_filter': ("Filters out records for which given field don't match value from another (target) field",
+                         ('field', 'target')),
+        'filter_not_exists': ("Filters out records that doesn't have given field", ('field',)),
+        'rename_field': ("Rename provided field to the target one.",
+                         ('field', 'target')),
+        'extract': ("Extracts the regex groups from the given field, and save in the given target field",
+                    ('field', 'regex', 'regex_flags', 'target', 'separator', 'regex_per_item')),
+        'template': ("Copy given fields (in template format) from each record in a dataset into the given target field",
+                     ('field', 'target')),
+        'remove_fields': ("Remove the given fields (either comma-separated or a list) of each record in a dataset.",
+                          ('field',)),
+        'dedupe': ("Dedupe using given field as deduping key", ('field')),
+        'preset': ("Preset filtering. Pipeline must be a mapping from a pipeline name (provided in args.target)\
+                    to a list of Args objects. Pipeline can be given via arguments or as a class attribute. ",
+                   ('target', 'operation')),
+        'plaintext': ("Converts text to plain:\
+                        - lowers letters\
+                        - replace spaces and hyphens by _\
+                        - remove any other character that are not digits",
+                      ('field',)),
+        'function': ("Apply given function (if string, as an absolute python path) to each record.\
+                      Function parameters are one record and command line args.\
+                      Function return value is the modified record.\
+                      Function is provided in the field argument.",
+                     ('field',)),
+        'fixed_value': ("Add a fixed target value to the given field in every record",
+                        ('field', 'target')),
+    }
     DEFAULTS = {
         'regex_flags': list,
         'separator': str,
@@ -56,9 +79,6 @@ class Transform:
 
     @staticmethod
     def filter_regex(dataset, args):
-        """
-        Filters out records that don't match given regex in the given field
-        """
         regex_re = re.compile(args.regex, flags=reflags(args.regex_flags))
         for d in dataset:
             if args.field in d:
@@ -69,10 +89,7 @@ class Transform:
 
     @staticmethod
     def filter_regex_neg(dataset, args):
-        """
-        Filters out records that match given regex in the given field
-        """
-        regex_re = re.compile(args.regex, flags=re.I)
+        regex_re = re.compile(args.regex, flags=reflags(args.regex_flags))
         for d in dataset:
             if args.field in d:
                 if regex_re.search(d[args.field]) is None:
@@ -82,9 +99,6 @@ class Transform:
 
     @staticmethod
     def cross_filter(dataset, args):
-        """
-        Filters out records for which given field don't match value from another (target) field
-        """
         for d in dataset:
             if args.field in d and args.target in d:
                 if d[args.target] in d[args.field]:
@@ -94,18 +108,12 @@ class Transform:
 
     @staticmethod
     def filter_not_exists(dataset, args):
-        """
-        Filters out records that doesn't have given field
-        """
         for d in dataset:
             if args.field in d:
                 yield d
 
     @staticmethod
     def rename_field(dataset, args):
-        """
-        Rename provided field to the target one.
-        """
         for d in dataset:
             if args.field in d:
                 d[args.target] = d.pop(args.field)
@@ -113,9 +121,6 @@ class Transform:
 
     @staticmethod
     def extract(dataset, args):
-        """
-        Extracts the regex groups from the given field, and save in the given target field
-        """
         if args.regex is not None:
             regex_re = re.compile(args.regex, flags=reflags(args.regex_flags))
         for d in dataset:
@@ -132,20 +137,13 @@ class Transform:
 
     @staticmethod
     def template(dataset, args):
-        """
-        Copy given fields (in template format) from each record in a dataset,
-        into the given target field
-        """
         for d in dataset:
             d[args.target] = args.field.format(**d)
             yield d
 
     @staticmethod
     def remove_fields(dataset, args):
-        """
-        Remove the given fields (either comma-separated or a list) of each record in a dataset.
-        """
-        fields= args.field
+        fields = args.field
         if isinstance(fields, str):
             fields = fields.split(',')
         for d in dataset:
@@ -155,9 +153,6 @@ class Transform:
 
     @staticmethod
     def dedupe(dataset, args):
-        """
-        Dedupe using given field as deduping key
-        """
         seen = set()
         for d in dataset:
             if args.field not in d:
@@ -168,9 +163,6 @@ class Transform:
 
     @classmethod
     def preset(cls, dataset, args):
-        """Preset filtering. Pipeline must be a mapping from a pipeline name (provided in args.target)
-        to a list of Args objects. Pipeline can be given via arguments or as a class attribute.
-        """
         pipeline = load_object(args.pipeline) if args.pipeline else cls.PIPELINE
         assert pipeline, 'A pipeline must be defined.'
         result = dataset
@@ -182,35 +174,20 @@ class Transform:
 
     @staticmethod
     def plaintext(dataset, args):
-        """
-        Converts text to plain:
-        - lowers letters
-        - replace spaces and hyphens by _
-        - remove any other character that are not digits
-        """
         for d in dataset:
             d[args.field] = plain(d[args.field])
             yield d
 
     @staticmethod
     def function(dataset, args):
-        """
-        Apply given function (if string, as an absolute python path) to each record.
-        Function parameters are one record and command line args.
-        Function return value is the modified record.
-        Function is provided in the field argument.
-        """
         func = args.field
         if isinstance(func, str):
-            func = load_objec(func)
+            func = load_object(func)
         for d in dataset:
             yield func(d, args)
 
     @staticmethod
     def fixedvalue(dataset, args):
-        """
-        Add a fixed target value to the given field in every record
-        """
         for d in dataset:
             d[args.field] = args.target
             yield d
@@ -222,7 +199,7 @@ class Transform:
 
     @classmethod
     def get_default(cls, option):
-        factory = cls.DEFAULTS.get(option, lambda : None)
+        factory = cls.DEFAULTS.get(option, lambda: None)
         return factory()
 
     @classmethod
@@ -245,21 +222,36 @@ class TransformScript(Transform):
         return args
 
     def add_argparser_options(self):
-        self.argparser.add_argument('operation', choices=Transform.OPERATIONS)
-        self.argparser.add_argument('--field', help='target field')
-        self.argparser.add_argument('--regex', help='Regex pattern')
-        self.argparser.add_argument('--regex-flags', action='append', default=Transform.get_default('regex_flags'))
-        self.argparser.add_argument('--target', help='Operation target (depends on operation)')
-        self.argparser.add_argument('--separator', help='Defines separator in join operations',
-                            default=Transform.get_default('separator'))
-        self.argparser.add_argument('--regex-per-item', help='Regex pattern applied per item')
-        self.argparser.add_argument('--pipeline', help='For preset operation, give pipeline \
-                                                absolute python path object. It must be a dict')
+        self.argparser.add_argument('--input', type=argparse.FileType('r'), help='Target file (default is stdin)',
+                                    default=sys.stdin)
+        self.argparser.add_argument('--output', type=argparse.FileType('w'), help='Target file (default is stdout)',
+                                    default=sys.stdout)
 
-        self.argparser.add_argument('--input', type=argparse.FileType('r'), help='Target file', default=sys.stdin)
-        self.argparser.add_argument('--output', type=argparse.FileType('w'), help='Target file', default=sys.stdout)
-       
+        subparsers = self.argparser.add_subparsers(dest='operation')
+        subparsers_maps = {}
+        for op, (helpstr, args) in self.OPERATIONS.items():
+            subparsers_maps[op] = subparsers.add_parser(op, help=helpstr)
+            if 'field' in args:
+                subparsers_maps[op].add_argument('--field', help='target field')
+            if 'regex' in args:
+                subparsers_maps[op].add_argument('--regex', help='Regex pattern')
+            if 'regex_flags' in args:
+                subparsers_maps[op].add_argument('--regex-flags', action='append',
+                                                 default=Transform.get_default('regex_flags'))
+            if 'target' in args:
+                subparsers_maps[op].add_argument('--target', help='Operation target (depends on operation)')
+            if 'separator' in args:
+                subparsers_maps[op].add_argument('--separator', help='Defines separator in join operations',
+                                                 default=Transform.get_default('separator'))
+            if 'regex_per_item' in args:
+                subparsers_maps[op].add_argument('--regex-per-item', help='Regex pattern applied per item')
+            if 'pipeline' in args:
+                subparsers_maps[op].add_argument('--pipeline', help='For preset operation, give pipeline \
+                                                 absolute python path object. It must be a dict')
+
     def main(self):
+        if self.args.operation is None:
+            self.argparser.error('Please provide an operation')
         dataset = [json.loads(l) for l in self.args.input]
         for d in Transform().run(dataset, self.args):
             print(json.dumps(d), file=self.args.output)
